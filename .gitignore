@@ -1,0 +1,17 @@
+*.exe
+*.o
+*.a
+*.so
+*.d
+*.vtk
+*.png
+*.svg
+*.avi
+results/*.dat
+results/*.txt
+results/*.pdf
+main
+octave-core
+wx2cpp
+ContactHistory
+
