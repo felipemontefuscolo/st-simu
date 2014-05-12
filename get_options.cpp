@@ -1,6 +1,4 @@
-#include "get_options.hpp"
-#include <iostream>
-#include <sstream>
+#include "common.hpp"
 
 std::string itos(int i)
 {
@@ -11,7 +9,7 @@ std::string itos(int i)
 
 
 // lua_states out in the same state
-std::vector<double> callField(UserInput &user_in, int func_idx, double x, double y, double z, double t, int tag, std::vector<double> const& pars)
+std::vector<double> callField(AppCtx& user_in, int func_idx, double x, double y, double z, double t, int tag, std::vector<double> const& pars)
 {
   lua_State *L = user_in.lua_state;
   int n_results = lua_gettop(L);
@@ -64,7 +62,7 @@ std::vector<double> callField(UserInput &user_in, int func_idx, double x, double
   return results;
 }
 
-double callScalarField(UserInput &user_in, int func_idx, double x, double y, double z, double t, int tag, std::vector<double> const& pars)
+double callScalarField(AppCtx& user_in, int func_idx, double x, double y, double z, double t, int tag, std::vector<double> const& pars)
 {
   lua_State *L = user_in.lua_state;
   lua_rawgeti(L, LUA_REGISTRYINDEX, func_idx);
@@ -142,7 +140,7 @@ MY_LUA_CHECK(userdata)
 
 #undef MY_LUA_CHECK
 
-bool read_user_settings(lua_State *lua_state, UserInput::Settings & settings)
+bool read_user_settings(lua_State *lua_state, AppCtx::Settings& settings)
 {
   lua_getglobal(lua_state, "settings");
   checkType_table(lua_state, "settings");
@@ -291,7 +289,7 @@ bool read_user_settings(lua_State *lua_state, UserInput::Settings & settings)
   return 0;
 }
 
-bool read_user_region_marks(lua_State *lua_state, UserInput::RegionMarks & regions)
+bool read_user_region_marks(lua_State *lua_state, AppCtx::RegionMarks& regions)
 {
   lua_getglobal(lua_state, "region_marks");
   checkType_table(lua_state, "region_marks");
@@ -349,7 +347,7 @@ bool read_user_region_marks(lua_State *lua_state, UserInput::RegionMarks & regio
   return 0;
 }
 
-bool read_user_unknown_fields(lua_State *lua_state, std::vector<UserInput::UnkField> & unk_fields)
+bool read_user_unknown_fields(lua_State *lua_state, std::vector<AppCtx::UnkField>& unk_fields)
 {
   lua_getglobal(lua_state, "unknown_fields");
   checkType_table(lua_state, "unknown_fields");
@@ -366,9 +364,9 @@ bool read_user_unknown_fields(lua_State *lua_state, std::vector<UserInput::UnkFi
       break;
     }
 
-    unk_fields.push_back(UserInput::UnkField());
+    unk_fields.push_back(AppCtx::UnkField());
 
-    UserInput::UnkField & unk_i = unk_fields.back();
+    AppCtx::UnkField & unk_i = unk_fields.back();
 
     // for each field, read its properties
     checkType_table(lua_state, "unknown_fields[i_unk]");
@@ -486,7 +484,7 @@ bool read_user_unknown_fields(lua_State *lua_state, std::vector<UserInput::UnkFi
   return 0;
 }
 
-bool read_user_systems(lua_State *lua_state, std::vector<UserInput::System>& systems)
+bool read_user_systems(lua_State *lua_state, std::vector<AppCtx::System>& systems)
 {
   lua_getglobal(lua_state, "systems");
   checkType_table(lua_state, "systems");
@@ -503,8 +501,8 @@ bool read_user_systems(lua_State *lua_state, std::vector<UserInput::System>& sys
       break;
     }
 
-    systems.push_back(UserInput::System());
-    UserInput::System& sys = systems.back();
+    systems.push_back(AppCtx::System());
+    AppCtx::System& sys = systems.back();
 
     // for each system, read its properties
     checkType_table(lua_state, "systems[sys]");
@@ -567,7 +565,7 @@ bool read_user_systems(lua_State *lua_state, std::vector<UserInput::System>& sys
   return 0;
 }
 
-bool read_user_parameters(lua_State *lua_state, std::vector<UserInput::Parameter> & parameters)
+bool read_user_parameters(lua_State *lua_state, std::vector<AppCtx::Parameter>& parameters)
 {
   lua_getglobal(lua_state, "parameters");
   checkType_table(lua_state, "parameters");
@@ -582,10 +580,10 @@ bool read_user_parameters(lua_State *lua_state, std::vector<UserInput::Parameter
       break;
     }
 
-    parameters.push_back(UserInput::Parameter());
+    parameters.push_back(AppCtx::Parameter());
     //parameters.back().name = lua_tostring(lua_state,-2);
 
-    checkType_table(lua_state, std::string("parameters[")+itos(idx-1)+std::string("]"));
+    checkType_table(lua_state, std::string("parameters[")+alelib::itos(idx-1)+std::string("]"));
     {
       lua_getfield(lua_state, -1, "name");
       checkType_string(lua_state, "name");
@@ -666,7 +664,7 @@ bool read_user_parameters(lua_State *lua_state, std::vector<UserInput::Parameter
   return 0;
 }
 
-bool read_user_petsc_options(lua_State *lua_state, UserInput::LuaPetscOps & petsc_opts)
+bool read_user_petsc_options(lua_State *lua_state, AppCtx::LuaPetscOps& petsc_opts)
 {
 
   lua_getglobal(lua_state, "petsc_options");
@@ -700,15 +698,15 @@ bool read_user_petsc_options(lua_State *lua_state, UserInput::LuaPetscOps & pets
   return 0;
 }
 
-int read_input(UserInput & user_in)
+int read_input(AppCtx& user_in)
 {
   //std::vector<System>    &  systems      = user_in.systems     ;
-  std::vector<UserInput::UnkField>  &  unk_fields   = user_in.unk_fields  ;
-  std::vector<UserInput::System>    &  systems      = user_in.systems     ;
-  UserInput::RegionMarks            &  regions      = user_in.regions     ;
-  UserInput::Settings               &  settings     = user_in.settings    ;
-  std::vector<UserInput::Parameter> &  parameters   = user_in.parameters  ;
-  UserInput::LuaPetscOps            &  petsc_opts   = user_in.petsc_opts  ;
+  std::vector<AppCtx::UnkField>  &  unk_fields   = user_in.unk_fields  ;
+  std::vector<AppCtx::System>    &  systems      = user_in.systems     ;
+  AppCtx::RegionMarks            &  regions      = user_in.regions     ;
+  AppCtx::Settings               &  settings     = user_in.settings    ;
+  std::vector<AppCtx::Parameter> &  parameters   = user_in.parameters  ;
+  AppCtx::LuaPetscOps            &  petsc_opts   = user_in.petsc_opts  ;
   lua_State*             &  lua_state    = user_in.lua_state   ;
   std::string            &  cfg_fname    = user_in.cfg_fname   ;
 

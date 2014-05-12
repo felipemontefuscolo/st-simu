@@ -1,11 +1,9 @@
 #include "common.hpp"
 
-extern void defineSystems(AppCtx& ctx);
 
 void AppCtx::initAll()
 {
   initShapes();
-  defineSystems(*this);
   initMeshIo();
   initPetscObjs();
 }
@@ -17,17 +15,17 @@ void AppCtx::initMeshIo()
 
 void AppCtx::initShapes()
 {
-  shapes_c.resize(input.unk_fields.size());
-  shapes_f.resize(input.unk_fields.size());
-  shapes_r.resize(input.unk_fields.size());
+  shapes_c.resize(unk_fields.size());
+  shapes_f.resize(unk_fields.size());
+  shapes_r.resize(unk_fields.size());
 
   // defining the shape functions
   for (unsigned i = 0; i < shapes_c.size(); ++i)
   {
-    shapes_c[i].setType( input.unk_fields[i].interpolation.c_str(), cell_dim(CELL_TYPE),   input.unk_fields[i].degree);
-    shapes_f[i].setType( input.unk_fields[i].interpolation.c_str(), cell_dim(FACET_TYPE),  input.unk_fields[i].degree);
+    shapes_c[i].setType( unk_fields[i].interpolation.c_str(), cell_dim(CELL_TYPE),   unk_fields[i].degree);
+    shapes_f[i].setType( unk_fields[i].interpolation.c_str(), cell_dim(FACET_TYPE),  unk_fields[i].degree);
     if (cell_dim(CELL_TYPE) > 2)
-      shapes_r[i].setType( input.unk_fields[i].interpolation.c_str(), cell_dim(RIDGE_TYPE),  input.unk_fields[i].degree);
+      shapes_r[i].setType( unk_fields[i].interpolation.c_str(), cell_dim(RIDGE_TYPE),  unk_fields[i].degree);
   }
 
   // defining the quadrature points
@@ -108,7 +106,7 @@ PetscErrorCode AppCtx::initPetscObjs()
 //  printf("\nallocing petsc objs ... ");
 //  PetscErrorCode      ierr;
 //
-//  std::vector<UnkField> const& unk_fields = input.unk_fields;
+//  std::vector<UnkField> const& unk_fields = unk_fields;
 //
 //  Mat_jac.resize();
 //  Vecs_u.resize();

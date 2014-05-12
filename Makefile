@@ -73,10 +73,10 @@ all: $(EXEC)
 $(EXEC): $(OBJECTS) chkopts
 	-${CLINKER} $(OBJECTS) -o $(EXEC) $(PETSC_KSP_LIB) $(LDLIBS) $(LDFLAGS)
 
-main.o: main.cpp common.hpp get_options.hpp Makefile
-get_options.o: get_options.cpp get_options.hpp common.hpp Makefile
-user_cfg.o: user_cfg.cpp common.hpp get_options.hpp Makefile
-init.o: init.cpp common.hpp get_options.hpp Makefile
+main.o: main.cpp common.hpp Makefile
+get_options.o: get_options.cpp common.hpp Makefile
+user_cfg.o: user_cfg.cpp common.hpp  Makefile
+init.o: init.cpp common.hpp Makefile
 
 clean::
 	$(RM) *.o $(EXEC)
