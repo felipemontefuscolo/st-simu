@@ -26,9 +26,10 @@ void print_settings(AppCtx & user_ctx)
   //cout << "Cell type number " << FACET_TYPE << endl;
   //cout << "Cell type number " << RIDGE_TYPE << endl;
   
+  cout << "\n\n*************************  " << user_ctx.settings.name << " *************************  " << endl << endl;
+  
   cout << "Settings:\n";
   cout << "=========\n";
-  cout << "name                        : " << user_ctx.settings.name << endl;
   cout << "mesh type                   : " << cell_name(CELL_TYPE) << endl;
   cout << "space dimension             : " << user_ctx.settings.space_dim << endl;
   cout << "time                        : " << "from=" << user_ctx.settings.time_from
@@ -146,6 +147,8 @@ int main(int argc, char **argv)
   user_ctx.mp = new MeshT(user_ctx.settings.space_dim);
   user_ctx.initAll();
 
+
+  user_ctx.destroyPetsc();
   PetscFinalize();
   return 0;
 }

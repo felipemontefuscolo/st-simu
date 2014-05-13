@@ -163,7 +163,7 @@ struct AppCtx
     int n_copies_per_ts;
     int sys_mapper; // the id of another system from which the mapper is copied; -1 means create its own mapper;
     bool active;
-    
+
     // Petsc structures
     std::vector<Vec> Vec_u; // Vec_u.size() = n_copies_per_ts; Vec_u[0] is the u at time n+1, Vec_u[1] at n, and so on
     Vec Vec_res; // it will be created only if active=true
@@ -171,9 +171,10 @@ struct AppCtx
     SNES snes;   // it will be created only if active=true
     KSP ksp;     // it will be created only if active=true
     PC pc;       // it will be created only if active=true
-    
+
     // Mapper: maps the mesh to the degrees of freedom
     std::tr1::shared_ptr<DofMapperT> mapper; // if sys_mapper < 0, it's allocated a new mapper; otherwise this->mapper=sys_mapper.mapper
+    alelib::index_t n_dofs;
   };
 
   struct RegionMarks
@@ -232,7 +233,8 @@ struct AppCtx
 
 
 
-  AppCtx() : lua_state(0), mp(NULL) {}
+  AppCtx() : lua_state(0), mp(NULL)
+  { }
 
   Timer timer;
 
@@ -270,22 +272,36 @@ struct AppCtx
   void initDofMappers();
   PetscErrorCode initPetscObjs();
 
-  ~AppCtx()
+  inline ~AppCtx();
+
+  void destroyPetsc()
   {
-    if (mp)
-      delete mp;
-    /* cleanup Lua */
-    if (lua_state != NULL)
+    // petsc objects
+    //
+    for (unsigned i = 0; i < systems.size(); ++i)
     {
-      int n = lua_gettop(lua_state);
-      printf("\nNumber of elements in lua stack : %i\n", n);
-      lua_close(lua_state);
+      System& sys = systems[i];
+      VecDestroy(&sys.Vec_res);
+      //for (unsigned j = 0; j < sys.Vec_u.size(); ++j)
+      //  VecDestroy(&sys.Vec_u[j]);
     }
   }
 };
 
 
+AppCtx::~AppCtx()
+{
+  if (mp)
+    delete mp;
+  /* cleanup Lua */
+  if (lua_state != NULL)
+  {
+    int n = lua_gettop(lua_state);
+    printf("\nNumber of elements in lua stack : %i\n", n);
+    lua_close(lua_state);
+  }
 
+}
 
 
 
