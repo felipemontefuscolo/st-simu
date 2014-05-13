@@ -20,14 +20,6 @@ void AppCtx::initMesh()
   mesh_reader.readFile(settings.input_meshfile.c_str(), mp);
   //
 
-  cout << endl;
-  cout << "Mesh data:" << endl;  
-  cout << "==========" << endl;  
-  cout << "# vertices   : " << mp->numVertices() << endl;
-  cout << "# ridges(3D) : " << mp->numRidges() << endl;
-  cout << "# facets     : " << mp->numFacets() << endl;
-  cout << "# cells      : " << mp->numCells() << endl;
-  
 }
 
 void AppCtx::initMeshIo()
@@ -129,6 +121,12 @@ void AppCtx::initDofMappers()
     printf("ERROR: Must create the mesh first!\n");
     throw;
   }
+
+  // assigning these system to the correspondent variables
+  for (unsigned i = 0; i < systems.size(); ++i)
+    for (unsigned j = 0; j < systems[i].fields_id.size(); ++j)
+      unk_fields[systems[i].fields_id[j]].sys_num = i;
+
   
   for (unsigned i = 0; i < systems.size(); ++i)
   {
@@ -177,16 +175,6 @@ void AppCtx::initDofMappers()
     systems[i].n_dofs = systems[i].mapper->numDofs() + systems[i].first_dof_number;
   }
 
-  cout << endl;
-  cout << "Degrees of freedom:" << endl;
-  cout << "===================" << endl;
-  cout << "# dofs:" << endl;
-  for (unsigned i = 0; i < systems.size(); ++i)
-    if (systems[i].active)
-      cout << "(active) system (" << i << ") : " << systems[i].n_dofs << endl;
-    else
-      cout << "         system (" << i << ") : " << systems[i].n_dofs << endl;
-  
 }
 
 PetscErrorCode AppCtx::initPetscObjs()
@@ -201,12 +189,12 @@ PetscErrorCode AppCtx::initPetscObjs()
     ierr = VecSetSizes(sys.Vec_res, PETSC_DECIDE, sys.n_dofs);            CHKERRQ(ierr);
     ierr = VecSetFromOptions(sys.Vec_res);                                CHKERRQ(ierr);
     
-    //for (unsigned j = 0; j < sys.Vec_u.size(); ++j)
-    //{
-    //  ierr = VecCreate(PETSC_COMM_WORLD, &sys.Vec_u[j]);                     CHKERRQ(ierr);
-    //  ierr = VecSetSizes(sys.Vec_u[j], PETSC_DECIDE, sys.n_dofs);            CHKERRQ(ierr);
-    //  ierr = VecSetFromOptions(sys.Vec_u[j]);                                CHKERRQ(ierr);      
-    //}
+    for (unsigned j = 0; j < sys.Vec_u.size(); ++j)
+    {
+      ierr = VecCreate(PETSC_COMM_WORLD, &sys.Vec_u[j]);                     CHKERRQ(ierr);
+      ierr = VecSetSizes(sys.Vec_u[j], PETSC_DECIDE, sys.n_dofs);            CHKERRQ(ierr);
+      ierr = VecSetFromOptions(sys.Vec_u[j]);                                CHKERRQ(ierr);      
+    }
   }
 
   PetscFunctionReturn(0);

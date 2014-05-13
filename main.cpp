@@ -20,35 +20,54 @@ const char* cell_name(ECellType ct)
   }
 }
 
-void print_settings(AppCtx & user_ctx)
+void AppCtx::printSettings() const
 {
   //cout << "Cell type number " << CELL_TYPE << endl;
   //cout << "Cell type number " << FACET_TYPE << endl;
   //cout << "Cell type number " << RIDGE_TYPE << endl;
-  
-  cout << "\n\n*************************  " << user_ctx.settings.name << " *************************  " << endl << endl;
-  
+
+  cout << "\n\n*************************  " << settings.name << " *************************  " << endl << endl;
+
+  cout << endl;
+  cout << "Mesh data:" << endl;
+  cout << "==========" << endl;
+  cout << "# vertices   : " << mp->numVertices() << endl;
+  cout << "# ridges(3D) : " << mp->numRidges() << endl;
+  cout << "# facets     : " << mp->numFacets() << endl;
+  cout << "# cells      : " << mp->numCells() << endl;
+
+  cout << endl;
+  cout << "Degrees of freedom:" << endl;
+  cout << "===================" << endl;
+  cout << "# dofs:" << endl;
+  for (unsigned i = 0; i < systems.size(); ++i)
+    if (systems[i].active)
+      cout << "(active) system (" << i << ") : " << systems[i].n_dofs << endl;
+    else
+      cout << "         system (" << i << ") : " << systems[i].n_dofs << endl;
+
+  cout << endl;
   cout << "Settings:\n";
   cout << "=========\n";
   cout << "mesh type                   : " << cell_name(CELL_TYPE) << endl;
-  cout << "space dimension             : " << user_ctx.settings.space_dim << endl;
-  cout << "time                        : " << "from=" << user_ctx.settings.time_from
-                                           <<", to="<<user_ctx.settings.time_to
-                                           <<", step=" << user_ctx.settings.time_step << endl;
-  cout << "exact integ. degree (cell)  : " << user_ctx.settings.quadr_degree_cell << endl;
-  cout << "exact integ. degree (facet) : " << user_ctx.settings.quadr_degree_facet << endl;
-  cout << "exact integ. degree (ridge) : " << user_ctx.settings.quadr_degree_ridge << endl;
-  cout << "input mesh file             : " << user_ctx.settings.input_meshfile << endl;
-  cout << "output mesh file (basename) : " << user_ctx.settings.output_basename << endl;
+  cout << "space dimension             : " << settings.space_dim << endl;
+  cout << "time                        : " << "from=" << settings.time_from
+                                           <<", to="<<settings.time_to
+                                           <<", step=" << settings.time_step << endl;
+  cout << "exact integ. degree (cell)  : " << settings.quadr_degree_cell << endl;
+  cout << "exact integ. degree (facet) : " << settings.quadr_degree_facet << endl;
+  cout << "exact integ. degree (ridge) : " << settings.quadr_degree_ridge << endl;
+  cout << "input mesh file             : " << settings.input_meshfile << endl;
+  cout << "output mesh file (basename) : " << settings.output_basename << endl;
 
   cout << endl;
 
   cout << "Variables:\n";
   cout << "==========\n";
   {
-    for (int j = 0; j < (int)user_ctx.unk_fields.size(); ++j)
+    for (int j = 0; j < (int)unk_fields.size(); ++j)
     {
-      AppCtx::UnkField & var = user_ctx.unk_fields[j];
+      AppCtx::UnkField const& var = unk_fields[j];
       cout << "name              : " << var.name << endl;
       cout << "num of components : " << var.n_comps << endl;
       cout << "interpolation     : " << var.interpolation << endl;
@@ -87,14 +106,14 @@ void print_settings(AppCtx & user_ctx)
 
   cout << "Regions:\n";
   cout << "========\n";
-  for (unsigned i = 0; i < user_ctx.regions.names.size(); ++i)
+  for (unsigned i = 0; i < regions.names.size(); ++i)
   {
     cout.width(20);
-    cout << std::left << user_ctx.regions.names[i] << ": { ";
-    for (unsigned j = 0; j < user_ctx.regions.tags[i].size(); ++j)
+    cout << std::left << regions.names[i] << ": { ";
+    for (unsigned j = 0; j < regions.tags[i].size(); ++j)
     {
-      cout << user_ctx.regions.tags[i][j];
-      if (j != user_ctx.regions.tags[i].size()-1)
+      cout << regions.tags[i][j];
+      if (j != regions.tags[i].size()-1)
         cout  << ", ";
       else
         cout << " }" << endl;
@@ -104,14 +123,14 @@ void print_settings(AppCtx & user_ctx)
 
   cout << "Parameters:\n";
   cout << "===========\n";
-  for (unsigned i = 0; i < user_ctx.parameters.size(); ++i)
+  for (unsigned i = 0; i < parameters.size(); ++i)
   {
     cout.width(20);
-    cout << std::left << user_ctx.parameters[i].name << ": { ";
-    for (unsigned j = 0; j < user_ctx.parameters[i].values.size() ; ++j)
+    cout << std::left << parameters[i].name << ": { ";
+    for (unsigned j = 0; j < parameters[i].values.size() ; ++j)
     {
-      cout << user_ctx.parameters[i].values[j];
-      if (j != user_ctx.parameters[i].values.size()-1)
+      cout << parameters[i].values[j];
+      if (j != parameters[i].values.size()-1)
         cout << ",  ";
       else
         cout << " }" << endl;
@@ -142,11 +161,10 @@ int main(int argc, char **argv)
 
   PetscInitialize(&petsc_argc, &petsc_argv, PETSC_NULL, help);
 
-  print_settings(user_ctx);
-  
   user_ctx.mp = new MeshT(user_ctx.settings.space_dim);
   user_ctx.initAll();
 
+  user_ctx.printSettings();
 
   user_ctx.destroyPetsc();
   PetscFinalize();

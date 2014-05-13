@@ -136,6 +136,8 @@ struct AppCtx
 
   struct UnkField
   {
+    UnkField() : name("undefined"), n_comps(1), sys_num(-1) {}
+    
     std::string name;
     int n_comps;
     std::string interpolation;
@@ -265,6 +267,15 @@ struct AppCtx
   MeshT    mesh;
 
 
+
+
+
+
+  // ******************** MEMBER FUNCTIONS *************************
+
+  void printSettings() const;
+
+
   void initAll();
   void initShapes();
   void initMesh();
@@ -282,8 +293,8 @@ struct AppCtx
     {
       System& sys = systems[i];
       VecDestroy(&sys.Vec_res);
-      //for (unsigned j = 0; j < sys.Vec_u.size(); ++j)
-      //  VecDestroy(&sys.Vec_u[j]);
+      for (unsigned j = 0; j < sys.Vec_u.size(); ++j)
+        VecDestroy(&sys.Vec_u[j]);
     }
   }
 };

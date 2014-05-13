@@ -565,7 +565,6 @@ bool read_user_systems(lua_State *lua_state, std::vector<AppCtx::System>& system
     lua_pop(lua_state, 1); // pop sys_i
   }
 
-
   lua_pop(lua_state, 1); // pop systems
 
   return 0;
