@@ -13,9 +13,9 @@ settings = {
 
   steady_state_tolerance = 1.e-7, -- defined as |u^n+1 - u^n|/|u^n|
 
-  input_meshfile = "ramp.msh",
+  input_meshfile = "some_dir/couette.msh",
 
-  output_basename = "ramp.vtk",
+  output_basename = "some_dir/couette.vtk",
 
   -- results print step
   print_step = 2,
@@ -95,7 +95,7 @@ systems = {
   --[[
   for each system define
   {
-    actived           =, -- true: allocate non-linear petsc solvers (SNES); false: allocated only petsc vectors
+    active           =, -- true: allocate non-linear petsc solvers (SNES); false: allocated only petsc vectors
     first_dof_number  =, -- usually you don't have to change this. On could define a number greater 0 and manage the equations by yourself
     variables         =, -- variables of this system
     n_copiers_per_ts  =, -- number of copies of the vector per time step.
@@ -105,7 +105,7 @@ systems = {
   
   -- system 0
   {
-    actived = true,
+    active = true,
     first_dof_number = 0,
     fields = {0,1}, -- velocity and pressure
     n_copies_per_ts = 2,
@@ -114,7 +114,7 @@ systems = {
   
   -- system 1
   {
-    actived = true,
+    active = true,
     first_dof_number = 0,
     fields = {2}, -- mesh velocity
     n_copies_per_ts = 2,
@@ -123,7 +123,7 @@ systems = {
 
   -- system 3
   {
-    actived = false,
+    active = false,
     first_dof_number = 0,
     fields = {3}, -- geometry
     n_copies_per_ts = 2,

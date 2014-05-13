@@ -27,7 +27,7 @@ void print_settings(AppCtx & user_ctx)
   //cout << "Cell type number " << RIDGE_TYPE << endl;
   
   cout << "Settings:\n";
-  cout << "---------\n";
+  cout << "=========\n";
   cout << "name                        : " << user_ctx.settings.name << endl;
   cout << "mesh type                   : " << cell_name(CELL_TYPE) << endl;
   cout << "space dimension             : " << user_ctx.settings.space_dim << endl;
@@ -43,7 +43,7 @@ void print_settings(AppCtx & user_ctx)
   cout << endl;
 
   cout << "Variables:\n";
-  cout << "----------\n";
+  cout << "==========\n";
   {
     for (int j = 0; j < (int)user_ctx.unk_fields.size(); ++j)
     {
@@ -85,7 +85,7 @@ void print_settings(AppCtx & user_ctx)
   }
 
   cout << "Regions:\n";
-  cout << "--------\n";
+  cout << "========\n";
   for (unsigned i = 0; i < user_ctx.regions.names.size(); ++i)
   {
     cout.width(20);
@@ -102,7 +102,7 @@ void print_settings(AppCtx & user_ctx)
   cout << endl;
 
   cout << "Parameters:\n";
-  cout << "-----------\n";
+  cout << "===========\n";
   for (unsigned i = 0; i < user_ctx.parameters.size(); ++i)
   {
     cout.width(20);

@@ -156,13 +156,24 @@ struct AppCtx
 
   struct System
   {
-    System() : fields_id(), first_dof_number(0), n_copies_per_ts(2), mapper(-1), actived(true) {}
+    System() : fields_id(), first_dof_number(0), n_copies_per_ts(2), sys_mapper(-1), active(true) {}
 
     std::vector<int> fields_id; // unk_fields id of this system
     int first_dof_number;
     int n_copies_per_ts;
-    int mapper; // the id of another system from which the mapper is copied; -1 means create its own mapper;
-    bool actived;
+    int sys_mapper; // the id of another system from which the mapper is copied; -1 means create its own mapper;
+    bool active;
+    
+    // Petsc structures
+    std::vector<Vec> Vec_u; // Vec_u.size() = n_copies_per_ts; Vec_u[0] is the u at time n+1, Vec_u[1] at n, and so on
+    Vec Vec_res; // it will be created only if active=true
+    Mat Mat_jac; // it will be created only if active=true
+    SNES snes;   // it will be created only if active=true
+    KSP ksp;     // it will be created only if active=true
+    PC pc;       // it will be created only if active=true
+    
+    // Mapper: maps the mesh to the degrees of freedom
+    std::tr1::shared_ptr<DofMapperT> mapper; // if sys_mapper < 0, it's allocated a new mapper; otherwise this->mapper=sys_mapper.mapper
   };
 
   struct RegionMarks
@@ -251,18 +262,12 @@ struct AppCtx
   IoVtkT   mesh_printer;
   MeshT    mesh;
 
-  // PETSC OBJS
-  std::vector<Mat>  Mat_jac; // vector jacobians
-  std::vector<Vec>  Vecs_u; // vector of unknowns vector
-  std::vector<Vec>  Vecs_r; // vector of residues
-  std::vector<SNES> sness; // vector of non-linear system context
-  std::vector<KSP>  ksps;
-  std::vector<PC>   pcs;
-
 
   void initAll();
   void initShapes();
+  void initMesh();
   void initMeshIo();
+  void initDofMappers();
   PetscErrorCode initPetscObjs();
 
   ~AppCtx()

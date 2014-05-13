@@ -416,6 +416,8 @@ bool read_user_unknown_fields(lua_State *lua_state, std::vector<AppCtx::UnkField
             if (lua_isnil(lua_state,-1))
             {
               lua_pop(lua_state,1);
+              if (jj==1) // created an empty vector ... delete it
+                unk_i.where_is_defined.clear();
               break;
             }
             checkType_number(lua_state, "where_is_defined[]");
@@ -507,9 +509,9 @@ bool read_user_systems(lua_State *lua_state, std::vector<AppCtx::System>& system
     // for each system, read its properties
     checkType_table(lua_state, "systems[sys]");
     {
-      lua_getfield(lua_state, -1, "actived");
-      checkType_boolean(lua_state, "actived");
-      sys.actived = lua_toboolean(lua_state, -1);
+      lua_getfield(lua_state, -1, "active");
+      checkType_boolean(lua_state, "active");
+      sys.active = lua_toboolean(lua_state, -1);
       lua_pop(lua_state, 1);
 
       lua_getfield(lua_state, -1, "first_dof_number");
@@ -549,7 +551,11 @@ bool read_user_systems(lua_State *lua_state, std::vector<AppCtx::System>& system
         int a = lua_tonumber(lua_state, -1);
         if (a<0)
           { printf("\nERROR:invalid mapper\n"); throw;}
-        sys.mapper = a;
+        sys.sys_mapper = a;
+      }
+      else
+      {
+        sys.sys_mapper = -1;
       }
       lua_pop(lua_state, 1);
 

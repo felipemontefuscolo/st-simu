@@ -3,9 +3,31 @@
 
 void AppCtx::initAll()
 {
+  initMesh();
   initShapes();
   initMeshIo();
+  initDofMappers();
   initPetscObjs();
+}
+
+void AppCtx::initMesh()
+{
+  if (mp)
+    delete mp;
+
+  mp = new MeshT(settings.space_dim);
+  
+  mesh_reader.readFile(settings.input_meshfile.c_str(), mp);
+  //
+
+  cout << endl;
+  cout << "Mesh data:" << endl;  
+  cout << "==========" << endl;  
+  cout << "# vertices   : " << mp->numVertices() << endl;
+  cout << "# ridges(3D) : " << mp->numRidges() << endl;
+  cout << "# facets     : " << mp->numFacets() << endl;
+  cout << "# cells      : " << mp->numCells() << endl;
+  
 }
 
 void AppCtx::initMeshIo()
@@ -101,6 +123,70 @@ void AppCtx::initShapes()
 
 }
 
+void AppCtx::initDofMappers()
+{
+  if (!mp) {
+    printf("ERROR: Must create the mesh first!\n");
+    throw;
+  }
+  
+  for (unsigned i = 0; i < systems.size(); ++i)
+  {
+    if (systems[i].fields_id.empty())
+    {
+      printf("ERROR: can not create a system with no fields (variables)\n");
+      throw;
+    }
+    
+    // create its own mapper
+    if (systems[i].sys_mapper < 0)
+    {
+      systems[i].mapper.reset(new DofMapperT(mp));
+      
+      for (unsigned j = 0; j < systems[i].fields_id.size(); ++j)
+      {
+        int const vid = systems[i].fields_id[j];
+        AppCtx::UnkField& v = unk_fields[vid];
+        systems[i].mapper->addVariable(v.name.c_str(), v.n_comps*shapes_c[vid].numDofsPerVertex(),
+                                                       v.n_comps*shapes_c[vid].numDofsInRidge(),
+                                                       v.n_comps*shapes_c[vid].numDofsInFacet(),
+                                                       v.n_comps*shapes_c[vid].numDofsInCell(),
+                                                       v.n_regions, v.n_tags.data(), v.tags.data());
+      }
+      
+      systems[i].mapper->SetUp();
+    }
+  }
+  
+  // Reuse mappers for systems specified by the user
+  for (unsigned i = 0; i < systems.size(); ++i)
+  {
+    int other_sys = systems[i].sys_mapper;
+    
+    if (other_sys < 0)
+      continue;
+    
+    if (other_sys >= (int)systems.size() || (other_sys==(int)i))
+    {
+      printf("ERROR: in input file: in system %d: invalid system ID (mapper)\n", (int)i);
+      throw;
+    }
+    
+    systems[i].mapper = systems[other_sys].mapper;
+  }
+
+  cout << endl;
+  cout << "Degrees of freedom:" << endl;
+  cout << "===================" << endl;
+  cout << "# dofs:" << endl;
+  for (unsigned i = 0; i < systems.size(); ++i)
+    if (systems[i].active)
+      cout << "(active) system (" << i << ") : " << systems[i].mapper->numDofs() << endl;
+    else
+      cout << "         system (" << i << ") : " << systems[i].mapper->numDofs() << endl;
+  
+}
+
 PetscErrorCode AppCtx::initPetscObjs()
 {
 //  printf("\nallocing petsc objs ... ");
@@ -124,8 +210,8 @@ PetscErrorCode AppCtx::initPetscObjs()
 
 
 
-
-  printf( "done\n");
+  return PetscErrorCode(0);
+  //printf( "done\n");
 }
 
 
