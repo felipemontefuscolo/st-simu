@@ -20,6 +20,24 @@ const char* cell_name(ECellType ct)
   }
 }
 
+void AppCtx::destroyPetsc()
+{
+  // petsc objects
+  //
+  for (unsigned i = 0; i < systems.size(); ++i)
+  {
+    System& sys = systems[i];
+    if (sys.active)
+    {
+      VecDestroy(&sys.Vec_res);
+      MatDestroy(&sys.Mat_jac);
+      SNESDestroy(&sys.snes);
+    }
+    for (unsigned j = 0; j < sys.Vec_u.size(); ++j)
+      VecDestroy(&sys.Vec_u[j]);
+  }
+}
+
 void AppCtx::printSettings() const
 {
   //cout << "Cell type number " << CELL_TYPE << endl;
@@ -31,6 +49,8 @@ void AppCtx::printSettings() const
   cout << endl;
   cout << "Mesh data:" << endl;
   cout << "==========" << endl;
+  cout << "input mesh file             : " << settings.input_meshfile << endl;
+  cout << "output mesh file (basename) : " << settings.output_basename << endl;  
   cout << "# vertices   : " << mp->numVertices() << endl;
   cout << "# ridges(3D) : " << mp->numRidges() << endl;
   cout << "# facets     : " << mp->numFacets() << endl;
@@ -57,8 +77,6 @@ void AppCtx::printSettings() const
   cout << "exact integ. degree (cell)  : " << settings.quadr_degree_cell << endl;
   cout << "exact integ. degree (facet) : " << settings.quadr_degree_facet << endl;
   cout << "exact integ. degree (ridge) : " << settings.quadr_degree_ridge << endl;
-  cout << "input mesh file             : " << settings.input_meshfile << endl;
-  cout << "output mesh file (basename) : " << settings.output_basename << endl;
 
   cout << endl;
 
@@ -89,6 +107,8 @@ void AppCtx::printSettings() const
         else
           cout << " }" << endl;
       }
+      if (var.where_is_defined.empty())
+        cout << "{} }\n";
 
       cout << "dirichlet tags    : " << "{ ";
       for (unsigned i = 0; i < var.dirich_tags.size(); ++i)
@@ -96,10 +116,8 @@ void AppCtx::printSettings() const
         cout << var.dirich_tags[i];
         if (i != var.dirich_tags.size()-1)
           cout << ",";
-        else
-          cout << " }" << endl;
       }
-      cout << endl;
+      cout << " }\n" << endl;
     }
     cout << endl;
   }

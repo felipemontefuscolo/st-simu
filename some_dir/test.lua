@@ -63,7 +63,7 @@ unknown_fields = {
     interpolation = "Lagrange",
     degree = 1,
     where_is_defined = {{1,2,3,4},{6,7,8}},
-    dirichlet_tags = { 1 }
+    dirichlet_tags = {  }
   },
 
   -- field number 2

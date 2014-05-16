@@ -176,7 +176,7 @@ struct AppCtx
 
     // Mapper: maps the mesh to the degrees of freedom
     std::tr1::shared_ptr<DofMapperT> mapper; // if sys_mapper < 0, it's allocated a new mapper; otherwise this->mapper=sys_mapper.mapper
-    alelib::index_t n_dofs;
+    alelib::index_t n_dofs; // warning: In a more general case this is different from mapper.numDofs()
   };
 
   struct RegionMarks
@@ -216,6 +216,10 @@ struct AppCtx
     }
   };
 
+  AppCtx() : lua_state(0), mp(NULL)
+  { }
+
+  inline ~AppCtx(); // defined below
 
   //
   // User input members
@@ -233,14 +237,11 @@ struct AppCtx
   // End User input
   //
 
-
-
-  AppCtx() : lua_state(0), mp(NULL)
-  { }
-
   Timer timer;
 
   MeshT* mp;
+  
+  int current_system_to_solve;
 
   std::vector<ShapeFunction>   shapes_c; // cell ... shapes_c[i] returns the shape-function of the variable i
   std::vector<ShapeFunction>   shapes_f; // facet
@@ -282,21 +283,15 @@ struct AppCtx
   void initMeshIo();
   void initDofMappers();
   PetscErrorCode initPetscObjs();
+  PetscErrorCode formJacobian(SNES /*snes*/,Vec x,Mat *Mat_Jac, Mat* /*prejac*/, MatStructure * /*flag*/);
+  PetscErrorCode formFunction(SNES /*snes*/, Vec x, Vec f);
 
-  inline ~AppCtx();
 
-  void destroyPetsc()
-  {
-    // petsc objects
-    //
-    for (unsigned i = 0; i < systems.size(); ++i)
-    {
-      System& sys = systems[i];
-      VecDestroy(&sys.Vec_res);
-      for (unsigned j = 0; j < sys.Vec_u.size(); ++j)
-        VecDestroy(&sys.Vec_u[j]);
-    }
-  }
+
+
+
+
+  void destroyPetsc();
 };
 
 

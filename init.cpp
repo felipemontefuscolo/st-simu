@@ -1,5 +1,9 @@
 #include "common.hpp"
 
+PetscErrorCode FormJacobian(SNES snes, Vec Vec_u, Mat *Mat_jac, Mat *prejac, MatStructure *flag, void *ptr);
+PetscErrorCode FormFunction(SNES snes, Vec Vec_u, Vec Vec_res, void *ptr);
+PetscErrorCode CheckSnesConvergence(SNES snes, PetscInt it, PetscReal xnorm, PetscReal pnorm, PetscReal fnorm, SNESConvergedReason *reason, void *ctx);
+
 
 void AppCtx::initAll()
 {
@@ -177,6 +181,83 @@ void AppCtx::initDofMappers()
 
 }
 
+
+// It is only a estimative ... it could be better if the nnz is exact
+int estimateNnz(MeshT const* mp, DofMapperT const& mapper)
+{
+  // get the greater valency
+  std::vector<CellH> star, star2;
+  VertexH v = mp->vertexBegin();
+  VertexH const v_end = mp->vertexEnd();
+  for (; v != v_end; ++v)
+  {
+    if (v.isDisabled(mp))
+      continue;
+
+    star2 = v.star(mp);
+    if (star.size() < star2.size())
+      star = star2;
+  }
+
+  int nnz = 0;
+  // vertices
+  {
+    SetVector<int> x;
+    for (unsigned i = 0; i < star.size(); ++i)
+    {
+      for (int j = 0; j < MeshT::verts_per_cell; ++j)
+        x.insert( star[i].vertex(mp, j).id(mp) );
+    }
+    // # dofs
+    for (int i = 0; i < mapper.numVars(); ++i)
+    {
+      nnz += x.size()*mapper.variable(i).numDofsInVertex();
+    }
+  }
+  
+  // ridges
+  if (MeshT::cell_dim < 2)
+  {
+    SetVector<int> x;
+    for (unsigned i = 0; i < star.size(); ++i)
+    {
+      for (int j = 0; j < MeshT::ridges_per_cell; ++j)
+        x.insert( star[i].ridge(mp, j).id(mp) );
+    }
+    // # dofs
+    for (int i = 0; i < mapper.numVars(); ++i)
+    {
+      nnz += x.size()*mapper.variable(i).numDofsInRidge();
+    }
+  }
+  
+  // facets
+  {
+    SetVector<int> x;
+    for (unsigned i = 0; i < star.size(); ++i)
+    {
+      for (int j = 0; j < MeshT::facets_per_cell; ++j)
+        x.insert( star[i].facet(mp, j).id(mp) );
+    }
+    // # dofs
+    for (int i = 0; i < mapper.numVars(); ++i)
+    {
+      nnz += x.size()*mapper.variable(i).numDofsInFacet();
+    }
+  }
+
+  // cells
+  {
+    // # dofs
+    for (int i = 0; i < mapper.numVars(); ++i)
+    {
+      nnz += star.size()*mapper.variable(i).numDofsInCell();
+    }
+  }
+  
+  return nnz;
+}
+
 PetscErrorCode AppCtx::initPetscObjs()
 {
 //  printf("\nallocing petsc objs ... ");
@@ -185,16 +266,64 @@ PetscErrorCode AppCtx::initPetscObjs()
   for (unsigned i = 0; i < systems.size(); ++i)
   {
     System& sys = systems[i];
-    ierr = VecCreate(PETSC_COMM_WORLD, &sys.Vec_res);                     CHKERRQ(ierr);
-    ierr = VecSetSizes(sys.Vec_res, PETSC_DECIDE, sys.n_dofs);            CHKERRQ(ierr);
-    ierr = VecSetFromOptions(sys.Vec_res);                                CHKERRQ(ierr);
-    
+
     for (unsigned j = 0; j < sys.Vec_u.size(); ++j)
     {
       ierr = VecCreate(PETSC_COMM_WORLD, &sys.Vec_u[j]);                     CHKERRQ(ierr);
       ierr = VecSetSizes(sys.Vec_u[j], PETSC_DECIDE, sys.n_dofs);            CHKERRQ(ierr);
       ierr = VecSetFromOptions(sys.Vec_u[j]);                                CHKERRQ(ierr);      
     }
+    
+    if (sys.active)
+    {
+      // create residue
+      ierr = VecCreate(PETSC_COMM_WORLD, &sys.Vec_res);                     CHKERRQ(ierr);
+      ierr = VecSetSizes(sys.Vec_res, PETSC_DECIDE, sys.n_dofs);            CHKERRQ(ierr);
+      ierr = VecSetFromOptions(sys.Vec_res);                                CHKERRQ(ierr);
+      
+      // create jacobian
+      ierr = MatCreate(PETSC_COMM_WORLD, &sys.Mat_jac);                                      CHKERRQ(ierr);
+      ierr = MatSetSizes(sys.Mat_jac, PETSC_DECIDE, PETSC_DECIDE, sys.n_dofs, sys.n_dofs);   CHKERRQ(ierr);
+      ierr = MatSetFromOptions(sys.Mat_jac);                                                 CHKERRQ(ierr);
+      int nnz = estimateNnz(mp, *sys.mapper);
+      //printf("NNZ = %d\n", nnz);
+      //ierr = MatSeqAIJSetPreallocation(sys.Mat_jac, 0, nnz.data());                      CHKERRQ(ierr);
+      ierr = MatSeqAIJSetPreallocation(sys.Mat_jac, nnz, PETSC_NULL);                      CHKERRQ(ierr);
+      //ierr = MatSetOption(Mat_jac,MAT_KEEP_NONZERO_PATTERN,PETSC_TRUE);                  CHKERRQ(ierr);
+      ierr = MatSetOption(sys.Mat_jac,MAT_NEW_NONZERO_ALLOCATION_ERR,PETSC_FALSE);       CHKERRQ(ierr);
+      
+      // create nonlinear solver
+      ierr = SNESCreate(PETSC_COMM_WORLD, &sys.snes);                                      CHKERRQ(ierr);
+      ierr = SNESSetFunction(sys.snes, sys.Vec_res, FormFunction, this);                   CHKERRQ(ierr);
+      ierr = SNESSetJacobian(sys.snes, sys.Mat_jac, sys.Mat_jac, FormJacobian, this);      CHKERRQ(ierr);
+      //ierr = SNESSetJacobian(snes,Mat_jac,Mat_jac,SNESDefaultComputeJacobian,&user);  CHKERRQ(ierr);
+     
+      //ierr = SNESSetConvergenceTest(snes,CheckSnesConvergence,this,PETSC_NULL); CHKERRQ(ierr);
+     
+      ierr = SNESGetKSP(sys.snes,&sys.ksp);                                                  CHKERRQ(ierr);
+      ierr = KSPGetPC(sys.ksp,&sys.pc);                                                      CHKERRQ(ierr);
+      ierr = KSPSetOperators(sys.ksp,sys.Mat_jac,sys.Mat_jac,SAME_NONZERO_PATTERN);          CHKERRQ(ierr);
+      //~ ierr = KSPSetType(ksp,KSPPREONLY);                                           CHKERRQ(ierr);
+      //~ ierr = KSPSetType(ksp,KSPGMRES);                                               CHKERRQ(ierr);
+      //~ ierr = PCSetType(pc,PCLU);                                                     CHKERRQ(ierr);
+      //~ ierr = PCFactorSetMatOrderingType(pc, MATORDERINGNATURAL);                         CHKERRQ(ierr);
+      //~ ierr = KSPSetTolerances(ksp,1.e-7,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);  CHKERRQ(ierr);
+    //~ ierr = SNESSetApplicationContext(snes,this);
+     
+      //~ #ifdef PETSC_HAVE_MUMPS
+      //~ PCFactorSetMatSolverPackage(pc,MATSOLVERMUMPS);
+      //~ #endif
+     
+      //ierr = SNESMonitorSet(snes, SNESMonitorDefault, 0, 0); CHKERRQ(ierr);
+      //ierr = SNESMonitorSet(snes,Monitor,0,0);CHKERRQ(ierr);
+      //ierr = SNESSetTolerances(snes,0,0,0,13,PETSC_DEFAULT);
+//      ierr = SNESSetFromOptions(sys.snes); CHKERRQ(ierr);
+
+      
+    }
+    
+    
+    
   }
 
   PetscFunctionReturn(0);
@@ -202,6 +331,34 @@ PetscErrorCode AppCtx::initPetscObjs()
 }
 
 
+#undef __FUNCT__
+#define __FUNCT__ "FormJacobian"
+PetscErrorCode FormJacobian(SNES snes, Vec Vec_u, Mat *Mat_jac, Mat *prejac, MatStructure *flag, void *ptr)
+{
+//  AppCtx *user    = static_cast<AppCtx*>(ptr);
+//  user->formJacobian(snes,Vec_u,Mat_jac,prejac,flag);
+  PetscFunctionReturn(0);
+}
+
+/* ------------------------------------------------------------------- */
+#undef __FUNCT__
+#define __FUNCT__ "FormFunction"
+PetscErrorCode FormFunction(SNES snes, Vec Vec_u, Vec Vec_fun, void *ptr)
+{
+//  AppCtx *user    = static_cast<AppCtx*>(ptr);
+//  user->formFunction(snes,Vec_u,Vec_fun);
+  PetscFunctionReturn(0);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "CheckSnesConvergence"
+PetscErrorCode CheckSnesConvergence(SNES snes, PetscInt it,PetscReal xnorm, PetscReal pnorm, PetscReal fnorm, SNESConvergedReason *reason, void *ctx)
+{
+//  AppCtx *user    = static_cast<AppCtx*>(ctx);
+//  user->checkSnesConvergence(snes, it, xnorm, pnorm, fnorm, reason);
+  PetscFunctionReturn(0);
+}
+ 
 
 
 

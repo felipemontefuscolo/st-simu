@@ -77,6 +77,7 @@ main.o: main.cpp common.hpp Makefile
 get_options.o: get_options.cpp common.hpp Makefile
 user_cfg.o: user_cfg.cpp common.hpp  Makefile
 init.o: init.cpp common.hpp Makefile
+residue.o: residue.cpp common.hpp Makefile
 
 clean::
 	$(RM) *.o $(EXEC)
