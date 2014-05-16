@@ -10,6 +10,7 @@
 results/*.dat
 results/*.txt
 results/*.pdf
+results/
 main
 octave-core
 wx2cpp

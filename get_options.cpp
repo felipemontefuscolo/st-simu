@@ -187,7 +187,7 @@ bool read_user_settings(lua_State *lua_state, AppCtx::Settings& settings)
       lua_close(lua_state);
       throw;
     }
-    settings.time_current = settings.time_from;
+    //settings.time_current = settings.time_from;
   }
   lua_pop(lua_state, 1);  // pops times
 

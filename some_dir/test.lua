@@ -15,7 +15,7 @@ settings = {
 
   input_meshfile = "some_dir/couette.msh",
 
-  output_basename = "some_dir/couette.vtk",
+  output_basename = "results/couette.vtk",
 
   -- results print step
   print_step = 2,
@@ -44,9 +44,23 @@ unknown_fields = {
       *  system_number : An integer starting from 0. It's the linear system id where field belongs. If you define a field in 0 and another in 2, there must exists a third in 1.
       *  where_is_defined: A table of tables with tags where the field is defined. Example: {{1,2,3},{4,5}} has two regions. Empty {{}} mean everywhere
       *  dirichlet_tags: A table with the tags where Dirichlet b.c. is applied
+      
+      NOTE: variable 0 is reserved to the mesh geometry  
+    
   --]]
 
-  -- field number 0 - velocity
+
+  -- field number 0 (always reserved for the mesh geometry)
+  {
+    name = "geometry",
+    n_components = settings.space_dim,
+    interpolation = "Lagrange",
+    degree = 2,
+    where_is_defined = {{}}, -- WARNING: geometry always must be defined everywhere!!
+    dirichlet_tags = { 11,22,33 }
+  },
+
+  -- field number 1 - velocity
   {
     name = "velocity",
     n_components = settings.space_dim,
@@ -56,7 +70,7 @@ unknown_fields = {
     dirichlet_tags = { 11,22,33 }
   },
 
-  -- field number 1 - pressure
+  -- field number 2 - pressure
   {
     name = "pressure",
     n_components = 1,
@@ -66,19 +80,9 @@ unknown_fields = {
     dirichlet_tags = {  }
   },
 
-  -- field number 2
-  {
-    name = "mesh_velocity",
-    n_components = settings.space_dim,
-    interpolation = "Lagrange",
-    degree = 2,
-    where_is_defined = {{}},
-    dirichlet_tags = { 11,22,33 }
-  },
-
   -- field number 3
   {
-    name = "geometry",
+    name = "mesh_velocity",
     n_components = settings.space_dim,
     interpolation = "Lagrange",
     degree = 2,
@@ -101,13 +105,16 @@ systems = {
     n_copiers_per_ts  =, -- number of copies of the vector per time step.
     mapper            =, -- "create_its_own": create a mapper wich maps mesh to dofs; sys_num: reuse dofs of the system sys_num
   },
-  --]]
   
-  -- system 0
+  NOTE: System 0 is reserved for the mesh geometry
+  
+  --]]
+
+  -- system 0 (reserved for the mesh geometry)
   {
-    active = true,
+    active = false,
     first_dof_number = 0,
-    fields = {0,1}, -- velocity and pressure
+    fields = {0}, -- geometry
     n_copies_per_ts = 2,
     mapper = "create_its_own"
   },
@@ -116,19 +123,20 @@ systems = {
   {
     active = true,
     first_dof_number = 0,
-    fields = {2}, -- mesh velocity
+    fields = {1,2}, -- velocity and pressure
     n_copies_per_ts = 2,
     mapper = "create_its_own"
   },
-
-  -- system 3
+  
+  -- system 2
   {
     active = false,
     first_dof_number = 0,
-    fields = {3}, -- geometry
+    fields = {3}, -- mesh velocity
     n_copies_per_ts = 2,
-    mapper = 1
+    mapper = 0
   }
+
 
 }
 

@@ -116,7 +116,6 @@ struct AppCtx
     double time_from;
     double time_to;
     double time_step;
-    double time_current;
 
     bool stop_at_steady_state;
     double steady_tol;
@@ -241,7 +240,9 @@ struct AppCtx
 
   MeshT* mp;
   
-  int current_system_to_solve;
+  int                 current_system_to_solve;
+  double              current_time;
+  std::vector<double> current_pars; // parameters
 
   std::vector<ShapeFunction>   shapes_c; // cell ... shapes_c[i] returns the shape-function of the variable i
   std::vector<ShapeFunction>   shapes_f; // facet
@@ -286,7 +287,9 @@ struct AppCtx
   PetscErrorCode formJacobian(SNES /*snes*/,Vec x,Mat *Mat_Jac, Mat* /*prejac*/, MatStructure * /*flag*/);
   PetscErrorCode formFunction(SNES /*snes*/, Vec x, Vec f);
 
-
+  // solving the systems
+  void solveTemporalProblem();
+  void setUpInitialConditions();
 
 
 

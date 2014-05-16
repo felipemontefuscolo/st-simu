@@ -158,6 +158,34 @@ void AppCtx::printSettings() const
 
 }
 
+void AppCtx::setUpInitialConditions()
+{
+  current_time = settings.time_from;
+  
+  // vertices dofs
+  {
+    VertexH v = mp->vertexBegin();
+    VertexH v_end = mp->vertexEnd();
+    for (; v != v_end; ++v)
+    {
+      if (v.isDisabled(mp))
+        continue;
+      
+      
+      
+    }
+    
+  }
+}
+
+void AppCtx::solveTemporalProblem()
+{
+  setUpInitialConditions();
+  
+  
+  
+}
+
 int main(int argc, char **argv)
 {
 
@@ -181,7 +209,6 @@ int main(int argc, char **argv)
 
   user_ctx.mp = new MeshT(user_ctx.settings.space_dim);
   user_ctx.initAll();
-
   user_ctx.printSettings();
 
   user_ctx.destroyPetsc();
